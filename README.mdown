@@ -1,0 +1,8 @@
+This very simple extension adds an 'tt' command to the Chrome Omnibox. For example, typing 'tt TTView' will bring up a list of all class names in the Three20 Library API matching 'TTView'—selecting a list item navigates to the relevant Three20 API Reference URL on [api.three20.info](http://api.three20.info).
+
+![Screenshot](http://farm6.static.flickr.com/5179/5437698841_9af26a8255_d.jpg)
+
+————————
+Requires Chrome 9 or later.
+
+This is inspired by [Roman Nurik's Android SDK Reference Search](https://chrome.google.com/webstore/detail/hgcbffeicehlpmgmnhnkjbjoldkfhoin) and [The Google Chrome Extensions sample](http://code.google.com/chrome/extensions/samples.html): [Extension Docs Search](http://src.chromium.org/viewvc/chrome/trunk/src/chrome/common/extensions/docs/examples/api/omnibox/extension-docs/).

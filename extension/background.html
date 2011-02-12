@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<script src="https://s3-us-west-1.amazonaws.com/three20/lists.js"></script>
+<script>
+
+// Called when the user clicks on the browser action.
+//  chrome.browserAction.onClicked.addListener(function(tab) {
+//    chrome.tabs.create({
+//        selected: true,
+//        url: "http://api.three20.info/annotated.php"
+//      });
+//  });
+
+  var OMNIBOX_MAX_RESULTS = 10;
+
+  chrome.omnibox.setDefaultSuggestion({
+    description: 'Search Three20 API docs for <match>%s</match>',
+  });
+
+  chrome.omnibox.onInputChanged.addListener(
+    function(query, suggestFn) {
+      if (!query)
+        return;
+    
+      suggestFn = suggestFn || function(){};
+      query = query.replace(/(^ +)|( +$)/g, '');
+
+      // Filter all classes/packages.
+      var results = [];
+      for (var i = 0; i < DATA.length; i++) {
+        var s = DATA[i];
+        if (query.length != 0 &&
+            s.label.toLowerCase().indexOf(query.toLowerCase()) != -1) {
+          results.push(s);
+        }
+      }
+
+      // Rank them.
+      rankResults(results, query);
+
+      // Add them as omnibox results, with prettyish formatting
+      // (highlighting, etc.).
+      var queryLower = query.toLowerCase();
+      var queryAlnumDot = (queryLower.match(/[\w\.]+/) || [''])[0];
+      var queryRE = new RegExp(
+          '(' + queryAlnumDot.replace(/\./g, '\\.') + ')', 'ig');
+      var capitalLetterRE = new RegExp(/[A-Z]/);
+
+      var omniboxResults = [];
+      for (var i = 0; i < OMNIBOX_MAX_RESULTS && i < results.length; i++) {
+        var result = results[i];
+
+        // Remove HTML tags from description since omnibox cannot display them.
+        var description = result.label;
+        var firstCap = description.search(capitalLetterRE);
+        if (firstCap >= 0) {
+          var newDesc;
+          newDesc = '<dim>' + description.substring(0, firstCap) + '</dim>';
+          newDesc += description.substring(firstCap);
+          description = newDesc;
+        }
+
+        description = description.replace(queryRE, '<match>$1</match>');
+
+        omniboxResults.push({
+          content: 'http://api.three20.info/' + result.link,
+          description: description
+        });
+      }
+
+      suggestFn(omniboxResults);
+    }
+  );
+
+
+  chrome.omnibox.onInputEntered.addListener(function(text) {
+    if (text.match(/^http\:/)) {
+      navigateToUrl(text);
+    } else {
+      navigateToUrl('http://api.three20.info/search.html#q=' +
+          encodeURIComponent(text) + '&t=0');
+    }
+  });
+
+
+  function navigateToUrl(url) {
+    chrome.tabs.getSelected(null, function(tab) {
+      chrome.tabs.update(tab.id, {url: url});
+    });
+  }
+
+
+  // helper function that gets the last occurence index of the given regex
+  // in the given string, or -1 if not found
+  function regexFindLast(s, re) {
+    if (s == '')
+      return -1;
+    var l = -1;
+    var tmp;
+    while ((tmp = s.search(re)) >= 0) {
+      if (l < 0) l = 0;
+      l += tmp;
+      s = s.substr(tmp + 1);
+    }
+    return l;
+  }
+
+  // helper function that counts the occurrences of a given character in
+  // a given string
+  function _countChar(s, c) {
+    var n = 0;
+    for (var i=0; i<s.length; i++)
+      if (s.charAt(i) == c) ++n;
+    return n;
+  }
+
+  function rankResults(matches, query) {
+    query = query || '';
+    matches = matches || [];
+
+    var queryLower = query.toLowerCase();
+    var queryAlnum = (queryLower.match(/\w+/) || [''])[0];
+    var partPrefixAlnumRE = new RegExp('\\b' + queryAlnum);
+    var partExactAlnumRE = new RegExp('\\b' + queryAlnum + '\\b');
+
+    var _resultScoreFn = function(result) {
+      // scores are calculated based on exact and prefix matches,
+      // and then number of path separators (dots) from the last
+      // match (i.e. favoring classes and deep package names)
+      var score = 1.0;
+      var labelLower = result.label.toLowerCase();
+      var t;
+      t = regexFindLast(labelLower, partExactAlnumRE);
+      if (t >= 0) {
+        // exact part match
+        var partsAfter = _countChar(labelLower.substr(t + 1), '.');
+        score *= 200 / (partsAfter + 1);
+      } else {
+        t = regexFindLast(labelLower, partPrefixAlnumRE);
+        if (t >= 0) {
+          // part prefix match
+          var partsAfter = _countChar(labelLower.substr(t + 1), '.');
+          score *= 20 / (partsAfter + 1);
+        }
+      }
+
+      return score;
+    };
+
+    for (var i = 0; i < matches.length; i++) {
+      matches[i].__resultScore = _resultScoreFn(matches[i]);
+    }
+
+    matches.sort(function(a,b) {
+      var n = b.__resultScore - a.__resultScore;
+      if (n == 0) // lexicographical sort if scores are the same
+          n = (a.label < b.label) ? -1 : 1;
+      return n;
+    });
+  }
+
+
+</script>
+</html>

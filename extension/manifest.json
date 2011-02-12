@@ -1,0 +1,33 @@
+{
+  "name": "Three20 API Reference Search",
+  "description": "Adds a 'tt' omnibox command for the Three20 Library API class reference.",
+  "version": "0.1",
+  "permissions": [
+    "tabs",
+    "http://*.three20.info/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "omnibox": {
+    "keyword": "tt"
+  },
+  "homepage_url": "http://johntwang.com/three20/chrome-extension" ,
+  "content_scripts": [
+    {
+      "matches": [
+        "http://api.three20.info/*",
+		"http://api.three20.info/deprecated",
+		"http://api.three20.info/files",
+		"http://api.three20.info/annotated"
+      ],
+      "js": [
+        "jquery-1.4.4.min.js",
+        "ref-inject-code-search.js"
+      ]
+    }
+  ],
+  "background_page": "background.html"
+}
